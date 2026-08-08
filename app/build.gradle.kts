@@ -61,7 +61,7 @@ android {
     productFlavors {
         create("standard") {
             dimension = "entrypoint"
-            buildConfigField("boolean", "HAS_LIBXPOKED_ENTRY", "true")
+            buildConfigField("boolean", "HAS_LIBXPOSED_ENTRY", "true")
             buildConfigField("String", "FLAVOR_SLUG", "\"standard\"")
         }
         create("legacy") {
