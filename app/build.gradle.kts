@@ -18,8 +18,6 @@ fun getCommitCount(): Int {
 }
 
 fun getGitHash(): String {
-    // fixed width: bare --short widens as history grows and varies across git versions, which would
-    // make versionName disagree with the hash xtask bakes into module.prop and the Zygisk zip name
     return providers.exec {
         commandLine("git", "rev-parse", "--short=8", "HEAD")
     }.standardOutput.asText.get().trim()
@@ -38,14 +36,13 @@ android {
     val gitHash = getGitHash()
 
     defaultConfig {
-        applicationId = libs.versions.namespace.get()
+        applicationId = libs.versions.applicationId.get()
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = commitCount
         versionName = "git+$gitHash"
 
         ndk {
-            // noinspection ChromeOsAbiSupport
             abiFilters += setOf("arm64-v8a", "armeabi-v7a")
         }
 
@@ -60,23 +57,15 @@ android {
         }
     }
 
-    // Two entry-point variants:
-    //  - standard: ships the modern libxposed entry point (entry/lxp/* sources +
-    //              META-INF/xposed/*), placed in the `standard` flavor source set.
-    //  - legacy:   omits both, so frameworks with poor libxposed compatibility fall
-    //              back to the traditional de.robv entry (Xp51HookEntry via
-    //              assets/xposed_init, which lives in `main` and is shared by both).
     flavorDimensions += "entrypoint"
     productFlavors {
         create("standard") {
             dimension = "entrypoint"
-            // ships the libxposed entry point (entry/lxp/* + META-INF/xposed/*)
-            buildConfigField("boolean", "HAS_LIBXPOSED_ENTRY", "true")
+            buildConfigField("boolean", "HAS_LIBXPOKED_ENTRY", "true")
             buildConfigField("String", "FLAVOR_SLUG", "\"standard\"")
         }
         create("legacy") {
             dimension = "entrypoint"
-            // no libxposed entry; framework falls back to the de.robv api
             buildConfigField("boolean", "HAS_LIBXPOSED_ENTRY", "false")
             buildConfigField("String", "FLAVOR_SLUG", "\"legacy\"")
         }
@@ -132,7 +121,7 @@ android {
     packaging {
         resources.excludes += listOf(
             "kotlin/**",
-            "**.bin",
+            "*z.bin",
             "kotlin-tooling-metadata.json",
             "META-INF/INDEX.LIST"
         )
@@ -186,8 +175,6 @@ androidComponents {
     }
 }
 
-// --- tasks ---
-
 val generateMethodHashes = tasks.register<GenerateMethodHashesTask>("generateMethodHashes") {
     description = "Generate resolveDex() method hashes"
     group = "wekit"
@@ -207,10 +194,7 @@ val generateNewFeatures = tasks.register<GenerateNewFeaturesTask>("generateNewFe
     gitHead.set(getGitHash())
 }
 
-// --- end tasks ---
-
 ksp {
-    // Room schema export for migration diffing
     arg("room.schemaLocation", "$projectDir/schemas")
     arg("room.generateKotlin", "true")
 }
@@ -261,10 +245,6 @@ dependencies {
     implementation(project(":libs:common:reflekt"))
     implementation(libs.libsu.core)
     implementation(libs.dexmaker)
-//    implementation(libs.arsclib)
-//    implementation(libs.apksig)
-//    implementation(libs.bouncycastle.prov)
-//    implementation(libs.bouncycastle.pkix)
     @Suppress("AvoidDuplicateDependencies")
     implementation(project(":libs:common:annotation-scanner"))
     @Suppress("AvoidDuplicateDependencies")
@@ -295,11 +275,11 @@ dependencies {
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.sse)
-    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.content-negotiation)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.websockets)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.serialization.kotlinx-json)
 
     implementation(libs.osmdroid.android)
 
@@ -308,16 +288,8 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// markwon conflict
 configurations.all {
     exclude(group = "org.jetbrains", module = "annotations-java5")
-
-//    resolutionStrategy {
-//        force("androidx.compose.ui:ui:1.12.0-beta01")
-//        force("androidx.compose.ui:ui-android:1.12.0-beta01")
-//        force("androidx.compose.material3:material3:1.5.0-alpha21")
-//        force("androidx.compose.material3:material3-android:1.5.0-alpha21")
-//    }
 }
 
 tasks.withType<KotlinJvmCompile>().configureEach {
