@@ -27,6 +27,7 @@ import dev.ujhhgtg.wekit.dexkit.dsl.dexClass
 import dev.ujhhgtg.wekit.dexkit.dsl.dexMethod
 import dev.ujhhgtg.wekit.features.core.ApiFeature
 import dev.ujhhgtg.wekit.features.core.Feature
+import dev.ujhhgtg.wekit.utils.HostInfo
 import dev.ujhhgtg.wekit.utils.WeLogger
 import dev.ujhhgtg.wekit.utils.reflection.bool
 import dev.ujhhgtg.wekit.utils.reflection.int
@@ -404,7 +405,11 @@ object WeSettingsInjector : ApiFeature(), IResolveDex, WeChatInputBarApi.IInputB
 
     @Suppress("NOTHING_TO_INLINE")
     fun openSettingsDialog(context: Context) {
-        context.startActivity(Intent(context, SettingsActivity::class.java))
+        // 使用模块自身(WePower)的 Application 上下文来构建 Intent，
+        // 避免在微信进程内用微信的 context 时，Intent 的包名被解析成 com.tencent.mm
+        // 从而找不到本模块导出的 SettingsActivity（ActivityNotFoundException）。
+        val moduleContext = HostInfo.application
+        moduleContext.startActivity(Intent(moduleContext, SettingsActivity::class.java))
     }
 
 //    private class SettingsMenuItemClickListener(val context: Context) :
